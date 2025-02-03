@@ -1,0 +1,15 @@
+biosphere2@1.21.4~1.0.2
+FastAyncWorldEdit@1.21.4~2.12.3
+LuckPerms@1.21.4~5.4.153
+MongoSK@1.21.4~2.3.0
+multiverse-core@1.21.4~4.3.14
+reqn@1.21.4~1.2.3
+SkBee@1.21.4~3.8.2
+SkCheese@1.21.4~1.5
+Skript@1.21.4~2.10.1
+skript-gui@1.21.4~1.3
+skript-json@1.21.4~1.1.0
+skript-reflect@1.21.4~2.6
+Vault@1.21.4~1.7.3
+ViaVersion@1.21.4~5.2.1
+VoidGen@1.21.4~2.2.1
