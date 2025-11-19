@@ -1,0 +1,20 @@
+#
+# All of these are Modrinth project slugs!!
+# some do not exist
+#
+
+biosphere2
+fastasyncworldedit
+luckperms
+mongosk
+multiverse-core
+reqn
+skbee
+skcheese
+skript
+skript-gui
+skript-json
+skript-reflect
+vault
+viaversion
+voidgen

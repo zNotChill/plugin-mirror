@@ -21,26 +21,30 @@ class Database {
         version TEXT,
         game_version TEXT,
         path TEXT,
-        downloads INTEGER
+        downloads INTEGER,
+        is_modrinth BOOLEAN,
+        modrinth_slug TEXT
       )
     `)
   }
 
   addPlugin(plugin: PluginTable) {
-    if (this.getPlugin(plugin)) {
+    if (this.getPartialPlugin(plugin)) {
       Error(`Failed to add plugin ${plugin.plugin_space} ${plugin.version} (MC ${plugin.game_version}), already exists`, "Database")
       return;
     }
     
     this.db.query(`
-      INSERT INTO plugins (plugin_space, version, game_version, path, downloads)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO plugins (plugin_space, version, game_version, path, downloads, is_modrinth, modrinth_slug)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
       plugin.plugin_space,
       plugin.version,
       plugin.game_version,
       plugin.path,
-      plugin.downloads
+      plugin.downloads,
+      plugin.is_modrinth,
+      plugin.modrinth_slug || null
     ])
 
     Log(`Added plugin ${plugin.plugin_space} ${plugin.version} (MC ${plugin.game_version}) | ${parseDependencyTag(plugin)}`, "Database")
@@ -48,7 +52,7 @@ class Database {
     return true;
   }
 
-  getPlugin(plugin: Partial<PluginTable>) {
+  getPartialPlugin(plugin: Partial<PluginTable>) {
     if (!plugin.plugin_space || !plugin.version || !plugin.game_version) {
       return;
     }
@@ -64,11 +68,22 @@ class Database {
       game_version: result[0][2],
       path: result[0][3],
       downloads: result[0][4],
+      is_modrinth: result[0][5],
+      modrinth_slug: result[0][6],
     } as PluginTable : null;
   }
 
+  getPlugin(space: string, version: string, gameVersion: string) {
+    const plugin: Partial<PluginTable> = {
+      plugin_space: space,
+      version: version,
+      game_version: gameVersion
+    };
+    return this.getPartialPlugin(plugin);
+  }
+
   getPluginJar(plugin: PluginTable) {
-    const pluginData = this.getPlugin(plugin);
+    const pluginData = this.getPartialPlugin(plugin);
     if (!pluginData) return;
     if (!pluginData.path) return;
 

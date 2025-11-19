@@ -6,6 +6,9 @@ import { parseDependencyTag } from "../utils/Dependency.ts";
 import { PluginTable } from "../types/database/Tables.ts";
 import { convertUint8ArrayToMB } from "../utils/FileSize.ts";
 import { addAllBasePlugins } from "../mirror/database/PluginList.ts";
+import { PluginLookup } from "../mirror/lookup/Lookup.ts";
+import db from "../mirror/database/Database.ts";
+import { getLatestGameVersion } from "../versions/Versions.ts";
 
 let ip = "127.0.0.1";
 let port = 35826;
@@ -93,6 +96,71 @@ const addBasePlugins = new cliffy.Command()
     console.log(plugins.join("\n"));
   })
 
+const modrinthDownload = new cliffy.Command()
+  .name("download")
+  .description("Download a plugin using a Modrinth project slug.")
+  .arguments("<slug:string>")
+  .option("-g, --game-version <version:string>", "Game version to filter versions by")
+  .action(async ({ gameVersion }, slug: string) => {
+    Log(`Fetching Modrinth project '${slug}'...`, "CLI");
+
+    const projectRes = await PluginLookup.getProjectInfo(slug);
+    if (projectRes === null) {
+      LogError(`Modrinth project not found: ${slug}`, "CLI");
+      return;
+    }
+
+    const versionUrl = gameVersion
+      ? `https://api.modrinth.com/v2/project/${slug}/version?game_versions=["${gameVersion}"]`
+      : `https://api.modrinth.com/v2/project/${slug}/version`;
+
+    const versionsRes = await fetch(versionUrl);
+    const versions = await versionsRes.json();
+
+    if (!versions.length) {
+      LogError(`No versions found for ${slug} (game version: ${gameVersion ?? "any"})`, "CLI");
+      return;
+    }
+
+    const latest = versions[0];
+    const file = latest.files[0];
+
+    const usedGameVersion = gameVersion
+      ? gameVersion
+      : getLatestGameVersion(latest.game_versions);
+
+    const fullSpace = `${projectRes.slug}@${usedGameVersion}~${latest.version_number}`;
+
+    Log(`Found file: ${fullSpace} (${file.size} bytes)`, "CLI");
+
+    latest.game_versions.forEach((version: string) => {
+      Log(`✅ ${version}`, "CLI");
+    })
+
+    Log(`Downloading...`, "CLI");
+
+    const fileRes = await fetch(file.url);
+    const data = new Uint8Array(await fileRes.arrayBuffer());
+
+    const outPath = `./data/plugins/${file.filename}`;
+    Deno.writeFileSync(outPath, data);
+
+    Log(`Downloaded: ${outPath}`, "CLI");
+    Log(`Adding to database...`, "CLI");
+
+    const pluginInfo = {
+      plugin_space: projectRes.slug,
+      version: latest.version_number,
+      game_version: usedGameVersion,
+      path: file.filename,
+      downloads: 0,
+      is_modrinth: true,
+      modrinth_slug: projectRes.slug
+    } as PluginTable;
+
+    await db.addPlugin(pluginInfo);
+  });
+
 const pmirror = new cliffy.Command()
   .name("pmirror")
   .version("1.0.0")
@@ -150,5 +218,6 @@ const pmirror = new cliffy.Command()
   })
   .command("api", runAPI)
   .command("baseplugins", addBasePlugins)
+  .command("lookup", modrinthDownload)
 
 await pmirror.parse(Deno.args);

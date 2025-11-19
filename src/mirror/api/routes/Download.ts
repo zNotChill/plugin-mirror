@@ -15,7 +15,7 @@ export default {
       return;
     }
 
-    const plugin = db.getPlugin({
+    const plugin = db.getPartialPlugin({
       plugin_space: space,
       game_version,
       version
